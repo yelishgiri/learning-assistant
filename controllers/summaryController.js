@@ -2,7 +2,9 @@ require("dotenv").config();
 const prisma = require("../lib/prisma");
 const path = require("path");
 const fs = require("fs");
+
 const Anthropic = require("@anthropic-ai/sdk");
+const pdfParse = require("pdf-parse");
 
 const generateSummary = async (req, res) => {
   try {
@@ -21,7 +23,15 @@ const generateSummary = async (req, res) => {
     }
 
     console.log('Reading file content from:', filePath);
-    const fileContent = fs.readFileSync(filePath, "utf8");
+    let fileContent;
+    // If PDF, parse to text
+    if (file.name.toLowerCase().endsWith('.pdf')) {
+      const dataBuffer = fs.readFileSync(filePath);
+      const pdfData = await pdfParse(dataBuffer);
+      fileContent = pdfData.text;
+    } else {
+      fileContent = fs.readFileSync(filePath, "utf8");
+    }
     
     if (!process.env.ANTHROPIC_API_KEY) {
       console.error('ANTHROPIC_API_KEY not set');
@@ -49,12 +59,12 @@ const generateSummary = async (req, res) => {
       // Add a timeout for each Claude call (60s)
       const msg = await Promise.race([
         anthropic.messages.create({
-          model: "claude-3-5-sonnet-20241022",
+          model: "claude-sonnet-4-20250514",
           max_tokens: 1024,
           messages: [
             {
               role: "user",
-              content: `Summarize this study material chunk (${i + 1}/${chunks.length}):\n\n${chunks[i]}`,
+              content: `Summarize the following content as concise bullet points in Markdown. Focus on the key facts and concepts. Do not add any introductory or closing statements. Use **bold** for important terms.\n\n${chunks[i]}`,
             },
           ],
         }),
@@ -68,12 +78,12 @@ const generateSummary = async (req, res) => {
       console.log('Combining chunk summaries into final summary');
       const finalMsg = await Promise.race([
         anthropic.messages.create({
-          model: "claude-3-5-sonnet-20241022",
+          model: "claude-sonnet-4-20250514",
           max_tokens: 1024,
           messages: [
             {
               role: "user",
-              content: `Combine and summarize these study material summaries into a single summary:\n\n${summary}`,
+              content: `Combine and summarize these bullet point summaries into a single, concise Markdown bullet list. Do not add any intro or outro. Use **bold** for key terms.\n\n${summary}`,
             },
           ],
         }),
@@ -81,7 +91,7 @@ const generateSummary = async (req, res) => {
       ]);
       summary = finalMsg.content?.[0]?.text || finalMsg.completion || summary;
     }
-    
+
     console.log('Saving summary to database');
     await prisma.file.update({ where: { id: fileId }, data: { summary } });
     console.log('Summary generated successfully');

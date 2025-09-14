@@ -8,8 +8,13 @@
 <body>
   <div class="container">
     <h1>AI Summary for <%= file.name %></h1>
-    <pre style="white-space: pre-wrap; background: #f8fafc; padding: 1rem; border-radius: 8px;"><%= file.summary %></pre>
+  <div id="summary-md" class="markdown-summary"></div>
     <a href="/folder/<%= file.folderId %>/details" class="btn btn-secondary">Back to Folder</a>
   </div>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script>
+    var summary = <%- JSON.stringify(file.summary || "") %>;
+    document.getElementById('summary-md').innerHTML = marked.parse(summary);
+  </script>
 </body>
 </html>

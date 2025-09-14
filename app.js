@@ -31,8 +31,8 @@ app.use('/auth', authRouter);
 
 app.use('/folder', folderRouter);
 app.use('/file', fileRouter);
-app.use('/file', summaryRouter); // summary endpoints are /file/:id/summary
-app.use('/folder', musicRouter); // music endpoints are /folder/:id/music
+app.use('/file', summaryRouter); 
+app.use('/folder', musicRouter); 
 
 app.listen(PORT, () => {
     console.log(`App is listening on the ${PORT}`);

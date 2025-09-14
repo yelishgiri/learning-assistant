@@ -3,69 +3,14 @@ const prisma = require("../lib/prisma");
 const path = require("path");
 const fs = require("fs");
 
-// Music generation logic based on study material analysis
-const analyzeStudyMaterial = (files) => {
-  if (!files || files.length === 0) {
-    return {
-      studyType: 'general',
-      musicType: 'ambient',
-      description: 'General study music for focus and concentration',
-      tags: 'ambient, instrumental, calm, focus'
-    };
-  }
-
-  // Analyze file names and extensions to determine study type
-  const fileNames = files.map(file => file.name.toLowerCase());
-  const extensions = files.map(file => path.extname(file.name).toLowerCase());
-  
-  // Keywords for different study types
-  const memorizationKeywords = ['vocab', 'vocabulary', 'memorize', 'flashcard', 'definition', 'formula', 'equation', 'date', 'history'];
-  const analyticalKeywords = ['math', 'physics', 'chemistry', 'engineering', 'problem', 'solution', 'calculation', 'algorithm', 'code'];
-  const creativeKeywords = ['essay', 'writing', 'creative', 'art', 'design', 'project', 'presentation', 'brainstorm'];
-  
-  // Count matches for each study type
-  let memorizationScore = 0;
-  let analyticalScore = 0;
-  let creativeScore = 0;
-  
-  fileNames.forEach(fileName => {
-    memorizationKeywords.forEach(keyword => {
-      if (fileName.includes(keyword)) memorizationScore++;
-    });
-    analyticalKeywords.forEach(keyword => {
-      if (fileName.includes(keyword)) analyticalScore++;
-    });
-    creativeKeywords.forEach(keyword => {
-      if (fileName.includes(keyword)) creativeScore++;
-    });
-  });
-
-  // Determine primary study type
-  let studyType, musicType, description, tags;
-  
-  if (memorizationScore > analyticalScore && memorizationScore > creativeScore) {
-    studyType = 'memorization';
-    musicType = 'ambient';
-    description = 'Ambient music for memorization and rote learning';
-    tags = 'ambient, instrumental, minimalist, calm, focus, no lyrics, lo-fi';
-  } else if (analyticalScore > creativeScore) {
-    studyType = 'analytical';
-    musicType = 'baroque';
-    description = 'Baroque classical music for analytical problem-solving';
-    tags = 'baroque classical, instrumental, structured, mathematical, bach, vivaldi, focus';
-  } else if (creativeScore > 0) {
-    studyType = 'creative';
-    musicType = 'cinematic';
-    description = 'Cinematic music for creative thinking and inspiration';
-    tags = 'cinematic, instrumental, inspiring, dynamic, post-rock, creative, uplifting';
-  } else {
-    studyType = 'general';
-    musicType = 'ambient';
-    description = 'General study music for focus and concentration';
-    tags = 'ambient, instrumental, calm, focus, lo-fi, chill';
-  }
-
-  return { studyType, musicType, description, tags };
+// Always generate rap music with lyrics about the folder
+const analyzeStudyMaterial = (files, folderName) => {
+  return {
+    studyType: 'rap',
+    musicType: 'rap',
+    description: `A rap song introducing and themed around the folder "${folderName}". Include clever rhymes, educational content, and reference the folder's purpose or subject.`,
+    tags: 'rap, hip-hop, lyrics, vocal, clever, educational, folder-intro'
+  };
 };
 
 // Generate music using Suno API
@@ -84,11 +29,11 @@ const generateMusic = async (req, res) => {
       return res.status(404).send("Folder not found");
     }
 
-    // Analyze study materials to determine music type
-    const analysis = analyzeStudyMaterial(folder.files);
+  // Always generate rap music with lyrics about the folder
+  const analysis = analyzeStudyMaterial(folder.files, folder.name);
     console.log('Study analysis:', analysis);
 
-    // Generate music using Suno API
+    // Generate rap song with lyrics introducing the folder using Suno API
     const sunoResponse = await fetch('https://studio-api.prod.suno.com/api/v2/external/hackmit/generate', {
       method: 'POST',
       headers: {
@@ -96,9 +41,9 @@ const generateMusic = async (req, res) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        topic: `${analysis.description} for studying ${folder.name}`,
+        topic: `Create a rap song with lyrics that introduces the folder "${folder.name}". The rap should reference the folder's subject and motivate the listener to study. Include clever rhymes and educational content.`,
         tags: analysis.tags,
-        make_instrumental: true
+        make_instrumental: false
       })
     });
 
@@ -139,7 +84,7 @@ const generateMusic = async (req, res) => {
 
     // Start generating next track in background (with delay to avoid rate limits)
     setTimeout(() => {
-      generateNextTrack(folderId, analysis);
+      generateNextTrack(folderId, analysis, folder.name);
     }, 5000); // 5 second delay
 
     res.json({
@@ -261,12 +206,11 @@ const getFolderMusic = async (req, res) => {
   }
 };
 
-// Generate next track in queue (background function)
-const generateNextTrack = async (folderId, analysis) => {
+// Generate next rap track with lyrics using Suno API
+const generateNextTrack = async (folderId, analysis, folderName) => {
   try {
     console.log('Generating next track for folder:', folderId);
     
-    // Generate next track using Suno API
     const sunoResponse = await fetch('https://studio-api.prod.suno.com/api/v2/external/hackmit/generate', {
       method: 'POST',
       headers: {
@@ -274,9 +218,9 @@ const generateNextTrack = async (folderId, analysis) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        topic: `${analysis.description} for studying - variation`,
+        topic: `Create a new rap song with lyrics as a variation, still themed around the folder "${folderName}". Include clever rhymes and educational content.`,
         tags: analysis.tags,
-        make_instrumental: true
+        make_instrumental: false
       })
     });
 
@@ -489,11 +433,11 @@ const regenerateMusic = async (req, res) => {
       return res.status(404).send("Folder not found");
     }
 
-    // Analyze study materials to determine music type
-    const analysis = analyzeStudyMaterial(folder.files);
+  // Always generate rap music with lyrics about the folder
+  const analysis = analyzeStudyMaterial(folder.files, folder.name);
     console.log('Study analysis for regeneration:', analysis);
 
-    // Generate new music using Suno API
+    // Generate new rap song with lyrics introducing the folder using Suno API
     const sunoResponse = await fetch('https://studio-api.prod.suno.com/api/v2/external/hackmit/generate', {
       method: 'POST',
       headers: {
@@ -501,9 +445,9 @@ const regenerateMusic = async (req, res) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        topic: `${analysis.description} for studying ${folder.name} - fresh generation`,
+        topic: `Create a rap song with lyrics that introduces the folder "${folder.name}" for a fresh generation. The rap should reference the folder's subject and motivate the listener to study. Include clever rhymes and educational content.`,
         tags: analysis.tags,
-        make_instrumental: true
+        make_instrumental: false
       })
     });
 

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Log In</title>
+    <link rel="stylesheet" href="/auth/log-in/styles.css" >
+  </head>
+  <body>
+    <div class="login-container">
+      <div class="logo">
+        <h1>CloudVault</h1>
+        <p>Welcome back to your secure file storage</p>
+      </div>
+
+      <form action="/auth/log-in" method="POST">
+        <div class="form-group">
+          <label for="user_email">Email Address</label>
+          <input
+            id="user_email"
+            name="email"
+            placeholder="johndoe@gmail.com"
+            type="email"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="user_password">Password</label>
+          <input
+            id="user_password"
+            name="password"
+            placeholder="Enter your password"
+            type="password"
+            required
+          />
+        </div>
+
+        <button type="submit" class="submit-btn">Log In</button>
+      </form>
+
+      <div class="form-footer">
+        <p>Don't have an account? <a href="/auth/sign-up">Sign up here</a></p>
+      </div>
+    </div>
+  </body>
+</html>

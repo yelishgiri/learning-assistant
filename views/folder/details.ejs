@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><%= folder.name %> - Folder Details</title>
+    <link rel="stylesheet" href="/folder/details/styles.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+  </head>
+  <body>
+    <header class="header">
+      <div class="container">
+        <div class="header-content">
+          <div class="logo">
+            <i class="fas fa-cloud"></i>
+            <span>FileVault</span>
+          </div>
+          <div class="user-info">
+            <span>Welcome, <%= user.first_name %> <%= user.last_name %></span>
+            <div class="user-avatar">
+              <%= user.first_name.charAt(0) %><%= user.last_name.charAt(0) %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="container">
+        <!-- Breadcrumb -->
+        <div class="breadcrumb">
+          <a href="/dashboard" class="breadcrumb-link">
+            <i class="fas fa-home"></i>
+            Home
+          </a>
+          <i class="fas fa-chevron-right breadcrumb-separator"></i>
+          <span class="breadcrumb-current"><%= folder.name %></span>
+        </div>
+
+        <!-- Folder Header -->
+        <div class="folder-header">
+          <div class="folder-header-content">
+            <div class="folder-title">
+              <div class="folder-icon-large">
+                <i class="fas fa-folder"></i>
+              </div>
+              <div class="folder-details">
+                <h1><%= folder.name %></h1>
+                <div class="folder-meta-info">
+                  <span class="meta-item">
+                    <i class="fas fa-calendar"></i>
+                    Created: <%= new
+                    Date(folder.created_at).toLocaleDateString() %>
+                  </span>
+                  <span class="meta-item">
+                    <i class="fas fa-user"></i>
+                    Author: <%= folder.author.username %>
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="folder-actions">
+              <button class="btn btn-secondary">
+                <i class="fas fa-edit"></i>
+                Edit
+              </button>
+              <button class="btn btn-primary">
+                <i class="fas fa-share"></i>
+                Share
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Share Link Section -->
+        <% if (folder.shareLink) { %>
+        <div class="share-section">
+          <div class="share-card">
+            <div class="share-header">
+              <h3>
+                <i class="fas fa-link"></i>
+                Shared Link
+              </h3>
+            </div>
+            <div class="share-content">
+              <div class="share-link">
+                <input
+                  type="text"
+                  value="https://folder.id/<%= folder.id %>"
+                  readonly
+                  class="share-input"
+                />
+                <button class="btn btn-secondary copy-btn">
+                  <i class="fas fa-copy"></i>
+                  Copy
+                </button>
+              </div>
+              <div class="share-meta">
+                <span class="share-info">
+                  <i class="fas fa-clock"></i>
+                  Expires: <%= new Date(folder.expiresAt).toLocaleDateString()
+                  %>
+                </span>
+                <span class="share-info">
+                  <i class="fas fa-calendar-plus"></i>
+                  Created: <%= new Date(folder.createdAt).toLocaleDateString()
+                  %>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <% } %>
+
+        <!-- Files Section -->
+        <div class="files-section">
+
+          <div class="section-header">
+            <div class="section-title">
+              <h2>Files</h2>
+              <p>Manage your uploaded files</p>
+            </div>
+            <form action="/file/upload" method="post" enctype="multipart/form-data" style="display:inline-block;">
+              <input type="hidden" name="folder" value="<%= folder.id %>" />
+              <input type="file" name="file" id="fileInput" style="display:none;" multiple onchange="updateFileNameDisplay()" />
+              <button class="btn btn-primary" type="button" onclick="document.getElementById('fileInput').click()">
+                <i class="fas fa-plus"></i> Upload Files
+              </button>
+              <span id="filename" class="filename-display"></span>
+              <button class="btn btn-success" type="submit" style="margin-left:0.5em;">Submit</button>
+            </form>
+          </div>
+
+          <% if (folder.files && folder.files.length > 0) { %>
+          <div class="files-grid">
+            <% folder.files.forEach(function(file) { %>
+            <div class="file-card">
+              <div class="file-icon">
+                <i class="fas fa-file"></i>
+              </div>
+              <div class="file-info">
+                <div class="file-name"><%= file.name %></div>
+                <div class="file-meta">
+                  <span class="file-size">
+                    <i class="fas fa-hdd"></i>
+                    <%= (file.size / 1024).toFixed(2) %> KB
+                  </span>
+                  <span class="file-date">
+                    <i class="fas fa-calendar"></i>
+                    <%= new Date(file.createdAt).toLocaleDateString() %>
+                  </span>
+                  <span class="file-author">
+                    <i class="fas fa-user"></i>
+                    <%= file.author ? file.author.username : '' %>
+                  </span>
+                </div>
+                <% if (file.summary) { %>
+                  <div class="file-summary-preview" style="margin-top: 0.5rem; background: #f8fafc; padding: 0.5rem; border-radius: 6px; font-size: 0.95em;">
+                    <strong>Summary:</strong> <%= file.summary.length > 200 ? file.summary.slice(0, 200) + '...' : file.summary %>
+                    <a href="/file/<%= file.id %>/summary" class="btn btn-secondary" style="margin-left: 1rem; font-size: 0.9em; padding: 0.2em 0.7em;">View Full</a>
+                  </div>
+                <% } else { %>
+                  <form action="/file/<%= file.id %>/summary" method="POST" style="margin-top: 0.5rem; display: inline-block;">
+                    <button class="btn btn-primary" type="submit" style="font-size: 0.9em; padding: 0.2em 0.7em;">
+                      Generate Summary
+                    </button>
+                  </form>
+                <% } %>
+              </div>
+              <div class="file-actions">
+                <form action="/file/<%= file.id %>/download" method="get" style="display:inline;">
+                  <button class="action-btn" title="Download" type="submit">
+                    <i class="fas fa-download"></i>
+                  </button>
+                </form>
+                <form action="/file/<%= file.id %>/share" method="post" style="display:inline;">
+                  <button class="action-btn" title="Share" type="submit">
+                    <i class="fas fa-share"></i>
+                  </button>
+                </form>
+                <form action="/file/<%= file.id %>/delete" method="post" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this file?');">
+                  <button class="action-btn" title="Delete" type="submit">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </form>
+              </div>
+    <script>
+      function updateFileNameDisplay() {
+        const input = document.getElementById('fileInput');
+        const label = document.getElementById('filename');
+        if (input.files && input.files.length > 0) {
+          const names = Array.from(input.files).map(f => f.name).join(', ');
+          label.textContent = names;
+        } else {
+          label.textContent = 'No files selected';
+        }
+      }
+    </script>
+            </div>
+            <% }); %>
+          </div>
+          <% } else { %>
+          <div class="empty-state">
+            <div class="empty-icon">
+              <i class="fas fa-folder-open"></i>
+            </div>
+            <h3>No Files Found</h3>
+            <p>
+              Nothing found. Please upload some files so that we can see them
+              here.
+            </p>
+            <button class="btn btn-primary">
+              <i class="fas fa-upload"></i>
+              Upload Your First File
+            </button>
+          </div>
+          <% } %>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      // Copy to clipboard functionality
+      document
+        .querySelector(".copy-btn")
+        ?.addEventListener("click", function () {
+          const input = document.querySelector(".share-input");
+          input.select();
+          document.execCommand("copy");
+
+          const btn = this;
+          const originalText = btn.innerHTML;
+          btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+          btn.classList.add("btn-success");
+
+          setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.classList.remove("btn-success");
+          }, 2000);
+        });
+    </script>
+  </body>
+</html>

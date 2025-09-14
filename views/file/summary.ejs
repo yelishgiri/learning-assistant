@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>File Summary</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>Summary for <%= file.name %></h1>
+    <pre style="white-space: pre-wrap; background: #f8fafc; padding: 1rem; border-radius: 8px;"><%= file.summary %></pre>
+    <a href="/folder/<%= file.folderId %>/details" class="btn btn-secondary">Back to Folder</a>
+  </div>
+</body>
+</html>

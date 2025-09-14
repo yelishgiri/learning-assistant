@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Create</title>
+    <link rel="stylesheet" href="/folder/update/styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <form action="/folder/<%= folder.id %>/update" method="POST">
+        <div class="form-group">
+          <label for="user_folder_name">Name:</label>
+          <input
+            type="text"
+            name="user_folder_name"
+            id="user_folder_name"
+            value="<%= folder.name %>"
+            placeholder="Your First Folder"
+          />
+        </div>
+        <button type="submit" class="submit-btn">Submit</button>
+      </form>
+    </div>
+  </body>
+</html>

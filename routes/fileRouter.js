@@ -2,7 +2,7 @@ const fileController = require('../controllers/fileController');
 const { Router } = require('express');
 const fileRouter = Router();
 
-// File upload route
+// Study material upload route
 fileRouter.post('/upload', fileController.uploadFile);
 
 // File download route

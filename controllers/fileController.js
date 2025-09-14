@@ -21,19 +21,19 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// Middleware for file upload (for router)
+// Middleware for study material upload (for router)
 const uploadMiddleware = upload.array('file', 10); // up to 10 files
 
 // POST /file/upload
 const uploadFile = async (req, res) => {
 	uploadMiddleware(req, res, async function (err) {
 		if (err) {
-			return res.status(400).send('File upload error: ' + err.message);
+			return res.status(400).send('Study material upload error: ' + err.message);
 		}
 		const user_id = req.user.id;
 		const folderId = Number(req.body.folder);
 		if (!req.files || req.files.length === 0) {
-			return res.status(400).send('No files uploaded.');
+			return res.status(400).send('No study materials uploaded.');
 		}
 		try {
 			for (const file of req.files) {
@@ -54,7 +54,7 @@ const uploadFile = async (req, res) => {
 				res.redirect('/dashboard');
 			}
 		} catch (e) {
-			res.status(500).send('Error saving file metadata.');
+			res.status(500).send('Error saving study material metadata.');
 		}
 	});
 };
@@ -68,9 +68,9 @@ const shareFile = async (req, res) => {
 const downloadFile = async (req, res) => {
 	const fileId = Number(req.params.id);
 	const file = await prisma.file.findUnique({ where: { id: fileId } });
-	if (!file) return res.status(404).send('File not found');
+	if (!file) return res.status(404).send('Study material not found');
 	const filePath = path.join(__dirname, '../uploads', file.path);
-	if (!fs.existsSync(filePath)) return res.status(404).send('File missing on server');
+	if (!fs.existsSync(filePath)) return res.status(404).send('Study material missing on server');
 	res.download(filePath, file.name);
 };
 
@@ -78,7 +78,7 @@ const downloadFile = async (req, res) => {
 const deleteFile = async (req, res) => {
 	const fileId = Number(req.params.id);
 	const file = await prisma.file.findUnique({ where: { id: fileId } });
-	if (!file) return res.status(404).send('File not found');
+	if (!file) return res.status(404).send('Study material not found');
 	const filePath = path.join(__dirname, '../uploads', file.path);
 	try {
 		await prisma.file.delete({ where: { id: fileId } });
@@ -87,7 +87,7 @@ const deleteFile = async (req, res) => {
 		}
 		res.redirect('/dashboard');
 	} catch (e) {
-		res.status(500).send('Error deleting file.');
+		res.status(500).send('Error deleting study material.');
 	}
 };
 

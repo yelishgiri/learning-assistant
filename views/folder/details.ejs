@@ -16,7 +16,7 @@
         <div class="header-content">
           <div class="logo">
             <i class="fas fa-cloud"></i>
-            <span>FileVault</span>
+            <span>Edutora</span>
           </div>
           <div class="user-info">
             <span>Welcome, <%= user.first_name %> <%= user.last_name %></span>
@@ -120,14 +120,14 @@
 
           <div class="section-header">
             <div class="section-title">
-              <h2>Files</h2>
-              <p>Manage your uploaded files</p>
+              <h2>Study Materials</h2>
+              <p>Manage your uploaded study materials</p>
             </div>
             <form action="/file/upload" method="post" enctype="multipart/form-data" style="display:inline-block;">
               <input type="hidden" name="folder" value="<%= folder.id %>" />
               <input type="file" name="file" id="fileInput" style="display:none;" multiple onchange="updateFileNameDisplay()" />
               <button class="btn btn-primary" type="button" onclick="document.getElementById('fileInput').click()">
-                <i class="fas fa-plus"></i> Upload Files
+                <i class="fas fa-plus"></i> Upload Study Materials
               </button>
               <span id="filename" class="filename-display"></span>
               <button class="btn btn-success" type="submit" style="margin-left:0.5em;">Submit</button>
@@ -207,14 +207,14 @@
             <div class="empty-icon">
               <i class="fas fa-folder-open"></i>
             </div>
-            <h3>No Files Found</h3>
+            <h3>No Study Materials Found</h3>
             <p>
-              Nothing found. Please upload some files so that we can see them
+              Nothing found. Please upload some study materials so that we can see them
               here.
             </p>
             <button class="btn btn-primary">
               <i class="fas fa-upload"></i>
-              Upload Your First File
+              Upload Your First Study Material
             </button>
           </div>
           <% } %>

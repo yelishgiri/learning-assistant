@@ -6,6 +6,9 @@ const musicRouter = Router();
 // POST: Generate music for a folder
 musicRouter.post('/:id/generate', requireAuth, musicController.generateMusic);
 
+// POST: Regenerate music for a folder
+musicRouter.post('/:id/regenerate', requireAuth, musicController.regenerateMusic);
+
 // GET: Check music generation status
 musicRouter.get('/:id/status', requireAuth, musicController.getMusicStatus);
 

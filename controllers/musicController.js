@@ -164,12 +164,20 @@ const getMusicStatus = async (req, res) => {
       where: { id: folderId }
     });
 
-    if (!folder || !folder.musicClipId) {
-      return res.status(404).send("No music generation found for this folder");
+    if (!folder || !folder.musicQueue) {
+      return res.status(404).send("No music queue found for this folder");
     }
 
-    // Check status with Suno API
-    const sunoResponse = await fetch(`https://studio-api.prod.suno.com/api/v2/external/hackmit/clips?ids=${folder.musicClipId}`, {
+    const queue = Array.isArray(folder.musicQueue) ? folder.musicQueue : [];
+    const currentIndex = folder.currentTrackIndex || 0;
+    const currentTrack = queue[currentIndex];
+
+    if (!currentTrack) {
+      return res.status(404).send("No current track found");
+    }
+
+    // Check status with Suno API for current track
+    const sunoResponse = await fetch(`https://studio-api.prod.suno.com/api/v2/external/hackmit/clips?ids=${currentTrack.id}`, {
       headers: {
         'Authorization': `Bearer ${process.env.SUNO_API_KEY}`
       }
@@ -186,14 +194,25 @@ const getMusicStatus = async (req, res) => {
       return res.status(404).send("Music clip not found");
     }
 
-    // Update folder with current status
+    // Update current track in queue
+    const updatedQueue = [...queue];
+    updatedQueue[currentIndex] = {
+      ...currentTrack,
+      status: clip.status,
+      title: clip.title || currentTrack.title,
+      audioUrl: clip.audio_url || currentTrack.audioUrl,
+      imageUrl: clip.image_url || currentTrack.imageUrl
+    };
+
+    // Update folder with current status and queue
     await prisma.folder.update({
       where: { id: folderId },
       data: {
         musicStatus: clip.status,
         musicTitle: clip.title || '',
         musicAudioUrl: clip.audio_url || '',
-        musicImageUrl: clip.image_url || ''
+        musicImageUrl: clip.image_url || '',
+        musicQueue: updatedQueue
       }
     });
 
@@ -202,7 +221,10 @@ const getMusicStatus = async (req, res) => {
       title: clip.title,
       audioUrl: clip.audio_url,
       imageUrl: clip.image_url,
-      metadata: clip.metadata
+      metadata: clip.metadata,
+      currentIndex: currentIndex,
+      totalTracks: queue.length,
+      queue: updatedQueue
     });
 
   } catch (error) {
@@ -394,18 +416,148 @@ const getCurrentTrack = async (req, res) => {
       return res.status(404).send("No current track found");
     }
 
+    // Check if we need to update track status
+    if (currentTrack.status === 'generating' || currentTrack.status === 'streaming') {
+      try {
+        const sunoResponse = await fetch(`https://studio-api.prod.suno.com/api/v2/external/hackmit/clips?ids=${currentTrack.id}`, {
+          headers: {
+            'Authorization': `Bearer ${process.env.SUNO_API_KEY}`
+          }
+        });
+
+        if (sunoResponse.ok) {
+          const clips = await sunoResponse.json();
+          const clip = clips[0];
+          
+          if (clip) {
+            // Update track in queue
+            const updatedQueue = [...queue];
+            updatedQueue[currentIndex] = {
+              ...currentTrack,
+              status: clip.status,
+              title: clip.title || currentTrack.title,
+              audioUrl: clip.audio_url || currentTrack.audioUrl,
+              imageUrl: clip.image_url || currentTrack.imageUrl
+            };
+
+            // Update database
+            await prisma.folder.update({
+              where: { id: folderId },
+              data: { musicQueue: updatedQueue }
+            });
+
+            currentTrack.status = clip.status;
+            currentTrack.title = clip.title || currentTrack.title;
+            currentTrack.audioUrl = clip.audio_url || currentTrack.audioUrl;
+            currentTrack.imageUrl = clip.image_url || currentTrack.imageUrl;
+          }
+        }
+      } catch (error) {
+        console.error('Error updating track status:', error);
+      }
+    }
+
     res.json({
       success: true,
       track: currentTrack,
       currentIndex: currentIndex,
       totalTracks: queue.length,
       hasNext: currentIndex < queue.length - 1,
-      hasPrevious: currentIndex > 0
+      hasPrevious: currentIndex > 0,
+      queue: queue
     });
 
   } catch (error) {
     console.error('Get current track error:', error);
     res.status(500).send("Error getting current track: " + error.message);
+  }
+};
+
+// Regenerate music (clear queue and start fresh)
+const regenerateMusic = async (req, res) => {
+  try {
+    console.log('Music regeneration request for folder ID:', req.params.id);
+    const folderId = Number(req.params.id);
+    
+    // Get folder and its files
+    const folder = await prisma.folder.findUnique({
+      where: { id: folderId },
+      include: { files: true }
+    });
+    
+    if (!folder) {
+      return res.status(404).send("Folder not found");
+    }
+
+    // Analyze study materials to determine music type
+    const analysis = analyzeStudyMaterial(folder.files);
+    console.log('Study analysis for regeneration:', analysis);
+
+    // Generate new music using Suno API
+    const sunoResponse = await fetch('https://studio-api.prod.suno.com/api/v2/external/hackmit/generate', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.SUNO_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        topic: `${analysis.description} for studying ${folder.name} - fresh generation`,
+        tags: analysis.tags,
+        make_instrumental: true
+      })
+    });
+
+    if (!sunoResponse.ok) {
+      const errorText = await sunoResponse.text();
+      console.error('Suno API error:', errorText);
+      return res.status(500).send("Error generating music: " + errorText);
+    }
+
+    const sunoData = await sunoResponse.json();
+    console.log('Suno regeneration started:', sunoData.id);
+
+    // Create fresh queue with new track
+    const freshQueue = [{
+      id: sunoData.id,
+      status: 'generating',
+      title: '',
+      audioUrl: '',
+      imageUrl: '',
+      type: analysis.musicType,
+      description: analysis.description,
+      createdAt: new Date()
+    }];
+
+    // Clear existing queue and start fresh
+    await prisma.folder.update({
+      where: { id: folderId },
+      data: {
+        musicClipId: sunoData.id,
+        musicStatus: 'generating',
+        musicType: analysis.musicType,
+        musicDescription: analysis.description,
+        musicQueue: freshQueue,
+        currentTrackIndex: 0,
+        isQueueActive: true
+      }
+    });
+
+    // Start generating next track in background (with delay to avoid rate limits)
+    setTimeout(() => {
+      generateNextTrack(folderId, analysis);
+    }, 5000); // 5 second delay
+
+    res.json({
+      success: true,
+      clipId: sunoData.id,
+      message: 'Music regeneration started! Fresh music coming up.',
+      analysis: analysis,
+      queueActive: true
+    });
+
+  } catch (error) {
+    console.error('Music regeneration error:', error);
+    res.status(500).send("Error regenerating music: " + error.message);
   }
 };
 
@@ -415,5 +567,6 @@ module.exports = {
   getFolderMusic,
   skipNext,
   skipPrevious,
-  getCurrentTrack
+  getCurrentTrack,
+  regenerateMusic
 };

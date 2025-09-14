@@ -16,7 +16,7 @@
         <div class="header-content">
           <div class="logo">
             <i class="fas fa-cloud"></i>
-            <span>Edutora</span>
+            <span>Studyo</span>
           </div>
           <div class="user-info">
             <span>Welcome, <%= user.first_name %> <%= user.last_name %></span>
@@ -103,6 +103,28 @@
                         <span id="track-counter">Track 1 of 1</span>
                         <span id="queue-status" class="queue-status">Queue Active</span>
                       </div>
+                      <div id="queue-visualization" class="queue-visualization" style="display: none;">
+                        <div class="queue-tracks">
+                          <div id="queue-track-0" class="queue-track current">
+                            <div class="track-status">
+                              <i class="fas fa-play"></i>
+                            </div>
+                            <div class="track-info">
+                              <span class="track-title">Current Track</span>
+                              <span class="track-status-text">Playing</span>
+                            </div>
+                          </div>
+                          <div id="queue-track-1" class="queue-track next" style="display: none;">
+                            <div class="track-status generating">
+                              <div class="loading-spinner-small"></div>
+                            </div>
+                            <div class="track-info">
+                              <span class="track-title">Next Track</span>
+                              <span class="track-status-text">Generating...</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <div class="music-controls">
@@ -126,6 +148,14 @@
                     Generate Study Music
                   </button>
                   <p class="music-hint">Music will be tailored to your study materials</p>
+                </div>
+                
+                <div id="music-regenerate" class="music-regenerate" style="display: none;">
+                  <button id="regenerate-music-btn" class="btn btn-secondary">
+                    <i class="fas fa-redo"></i>
+                    Regenerate Study Music
+                  </button>
+                  <p class="music-hint">Generate fresh music for your study materials</p>
                 </div>
               </div>
             </div>
@@ -319,6 +349,9 @@
             } else if (data.status === 'generating' || data.status === 'streaming') {
               showMusicLoading();
               startMusicStatusCheck();
+            } else {
+              // Music exists but not ready, show regenerate option
+              showMusicRegenerate();
             }
           } else {
             showMusicGenerate();
@@ -340,14 +373,77 @@
             totalTracks = data.totalTracks;
             updateSkipButtons(data.hasNext, data.hasPrevious);
             updateTrackCounter();
+            updateQueueVisualization(data.queue);
             
             // If current track is ready, load it
             if (data.track.status === 'complete' && data.track.audioUrl) {
               loadTrack(data.track);
+            } else if (data.track.status === 'generating' || data.track.status === 'streaming') {
+              showMusicLoading();
             }
           }
         } catch (error) {
           console.error('Error checking current track:', error);
+        }
+      }
+
+      // Update queue visualization
+      function updateQueueVisualization(queue) {
+        if (!queue || queue.length === 0) {
+          document.getElementById('queue-visualization').style.display = 'none';
+          return;
+        }
+
+        document.getElementById('queue-visualization').style.display = 'block';
+        
+        // Update current track
+        const currentTrack = queue[currentTrackIndex];
+        if (currentTrack) {
+          const currentElement = document.getElementById('queue-track-0');
+          const statusIcon = currentElement.querySelector('.track-status i');
+          const statusText = currentElement.querySelector('.track-status-text');
+          const title = currentElement.querySelector('.track-title');
+          
+          title.textContent = currentTrack.title || 'Current Track';
+          
+          if (currentTrack.status === 'complete') {
+            statusIcon.className = 'fas fa-play';
+            statusText.textContent = 'Ready';
+            currentElement.className = 'queue-track current ready';
+          } else if (currentTrack.status === 'streaming') {
+            statusIcon.className = 'fas fa-spinner fa-spin';
+            statusText.textContent = 'Streaming...';
+            currentElement.className = 'queue-track current streaming';
+          } else {
+            statusIcon.className = 'fas fa-spinner fa-spin';
+            statusText.textContent = 'Generating...';
+            currentElement.className = 'queue-track current generating';
+          }
+        }
+
+        // Update next track
+        const nextTrack = queue[currentTrackIndex + 1];
+        const nextElement = document.getElementById('queue-track-1');
+        
+        if (nextTrack) {
+          nextElement.style.display = 'flex';
+          const nextTitle = nextElement.querySelector('.track-title');
+          const nextStatusText = nextElement.querySelector('.track-status-text');
+          const nextStatusIcon = nextElement.querySelector('.track-status');
+          
+          nextTitle.textContent = nextTrack.title || 'Next Track';
+          
+          if (nextTrack.status === 'complete') {
+            nextStatusIcon.innerHTML = '<i class="fas fa-check"></i>';
+            nextStatusText.textContent = 'Ready';
+            nextElement.className = 'queue-track next ready';
+          } else {
+            nextStatusIcon.innerHTML = '<div class="loading-spinner-small"></div>';
+            nextStatusText.textContent = 'Generating...';
+            nextElement.className = 'queue-track next generating';
+          }
+        } else {
+          nextElement.style.display = 'none';
         }
       }
 
@@ -374,6 +470,32 @@
           console.error('Error generating music:', error);
           alert('Error generating music: ' + error.message);
           showMusicGenerate();
+        }
+      }
+
+      // Regenerate music
+      async function regenerateMusic() {
+        try {
+          showMusicLoading();
+          
+          const response = await fetch(`/folder/${folderId}/regenerate`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          const data = await response.json();
+          
+          if (data.success) {
+            startMusicStatusCheck();
+          } else {
+            throw new Error(data.message || 'Failed to regenerate music');
+          }
+        } catch (error) {
+          console.error('Error regenerating music:', error);
+          alert('Error regenerating music: ' + error.message);
+          showMusicRegenerate();
         }
       }
 
@@ -404,18 +526,28 @@
       // Show different UI states
       function showMusicGenerate() {
         document.getElementById('music-generate').style.display = 'block';
+        document.getElementById('music-regenerate').style.display = 'none';
+        document.getElementById('music-loading').style.display = 'none';
+        document.getElementById('music-ready').style.display = 'none';
+      }
+
+      function showMusicRegenerate() {
+        document.getElementById('music-generate').style.display = 'none';
+        document.getElementById('music-regenerate').style.display = 'block';
         document.getElementById('music-loading').style.display = 'none';
         document.getElementById('music-ready').style.display = 'none';
       }
 
       function showMusicLoading() {
         document.getElementById('music-generate').style.display = 'none';
+        document.getElementById('music-regenerate').style.display = 'none';
         document.getElementById('music-loading').style.display = 'block';
         document.getElementById('music-ready').style.display = 'none';
       }
 
       function showMusicReady(data) {
         document.getElementById('music-generate').style.display = 'none';
+        document.getElementById('music-regenerate').style.display = 'block';
         document.getElementById('music-loading').style.display = 'none';
         document.getElementById('music-ready').style.display = 'block';
         
@@ -428,6 +560,11 @@
         if (data.audioUrl) {
           document.getElementById('music-source').src = data.audioUrl;
           document.getElementById('music-audio').load();
+        }
+        
+        // Show queue visualization if we have queue data
+        if (data.queue && data.queue.length > 0) {
+          updateQueueVisualization(data.queue);
         }
       }
 
@@ -448,6 +585,7 @@
             
             if (data.track.status === 'complete' && data.track.audioUrl) {
               loadTrack(data.track);
+              showMusicReady(data.track);
             } else {
               showMusicLoading();
               startMusicStatusCheck();
@@ -475,6 +613,7 @@
             
             if (data.track.status === 'complete' && data.track.audioUrl) {
               loadTrack(data.track);
+              showMusicReady(data.track);
             } else {
               showMusicLoading();
               startMusicStatusCheck();
@@ -534,12 +673,42 @@
 
       // Event listeners
       document.getElementById('generate-music-btn').addEventListener('click', generateMusic);
+      document.getElementById('regenerate-music-btn').addEventListener('click', regenerateMusic);
       document.getElementById('skip-next-btn').addEventListener('click', skipNext);
       document.getElementById('skip-previous-btn').addEventListener('click', skipPrevious);
+
+      // Periodic queue check
+      function startQueueCheck() {
+        setInterval(async () => {
+          try {
+            const response = await fetch(`/folder/${folderId}/current-track`);
+            const data = await response.json();
+            
+            if (data.success) {
+              currentTrackIndex = data.currentIndex;
+              totalTracks = data.totalTracks;
+              updateTrackCounter();
+              updateSkipButtons(data.hasNext, data.hasPrevious);
+              updateQueueVisualization(data.queue);
+              
+              // Update current track if ready
+              if (data.track.status === 'complete' && data.track.audioUrl) {
+                const audio = document.getElementById('music-audio');
+                if (audio.paused && audio.src !== data.track.audioUrl) {
+                  loadTrack(data.track);
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Error in periodic queue check:', error);
+          }
+        }, 3000); // Check every 3 seconds
+      }
 
       // Initialize music bar
       checkExistingMusic();
       setupAutoTransition();
+      startQueueCheck();
     </script>
   </body>
 </html>

@@ -1,4 +1,4 @@
-/* Updated CSS reset and base styles */
+/* Dark Lo-Fi Study Environment - Folder Details Theme */
 * {
   margin: 0;
   padding: 0;
@@ -8,11 +8,13 @@
 body {
   display: flex;
   flex-direction: column;
-  font-family: "Open Sans", sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
   line-height: 1.6;
-  color: #475569;
-  background-color: #ffffff;
-  min-height: 100vh; /* Changed from height: 100vh */
+  color: #e2e8f0;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+  min-height: 100vh;
+  font-weight: 400;
+  letter-spacing: -0.01em;
 }
 
 .container {
@@ -21,11 +23,12 @@ body {
   padding: 0 24px;
 }
 
-/* Added modern header styles */
+/* Dark Header Styles */
 .header {
-  background: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(71, 85, 105, 0.2);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   margin-bottom: 2rem;
   position: sticky;
   top: 0;
@@ -44,12 +47,16 @@ body {
   align-items: center;
   gap: 0.75rem;
   font-size: 1.5rem;
-  font-weight: 700;
-  color: #1f2937;
+  font-weight: 800;
+  color: #f1f5f9;
+  letter-spacing: -0.02em;
 }
 
 .logo i {
-  color: #8b5cf6;
+  background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   font-size: 1.75rem;
 }
 
@@ -58,13 +65,13 @@ body {
   align-items: center;
   gap: 1rem;
   font-weight: 500;
-  color: #6b7280;
+  color: #cbd5e1;
 }
 
 .user-avatar {
   width: 40px;
   height: 40px;
-  background: #8b5cf6;
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
   color: white;
   border-radius: 50%;
   display: flex;
@@ -72,6 +79,7 @@ body {
   justify-content: center;
   font-weight: 600;
   font-size: 0.875rem;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
 /* Enhanced button styles */
@@ -633,17 +641,33 @@ body {
   }
 }
 
-/* Music Bar Styles */
+/* Dark Music Bar Styles */
 .music-section {
   margin-bottom: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.music-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6, #f59e0b);
+  opacity: 0.8;
 }
 
 .music-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 16px;
-  padding: 2rem;
-  color: white;
-  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+  background: rgba(30, 41, 59, 0.8);
+  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  padding: 2.5rem;
+  color: #f1f5f9;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(71, 85, 105, 0.2);
+  position: relative;
 }
 
 .music-header {
@@ -671,11 +695,13 @@ body {
   margin: 0 auto;
 }
 
-.music-generate {
+.music-generate,
+.music-regenerate {
   text-align: center;
 }
 
-.music-generate .btn {
+.music-generate .btn,
+.music-regenerate .btn {
   background: rgba(255, 255, 255, 0.2);
   border: 2px solid rgba(255, 255, 255, 0.3);
   color: white;
@@ -687,11 +713,22 @@ body {
   backdrop-filter: blur(10px);
 }
 
-.music-generate .btn:hover {
+.music-generate .btn:hover,
+.music-regenerate .btn:hover {
   background: rgba(255, 255, 255, 0.3);
   border-color: rgba(255, 255, 255, 0.5);
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.music-regenerate .btn {
+  background: rgba(255, 193, 7, 0.2);
+  border-color: rgba(255, 193, 7, 0.4);
+}
+
+.music-regenerate .btn:hover {
+  background: rgba(255, 193, 7, 0.3);
+  border-color: rgba(255, 193, 7, 0.6);
 }
 
 .music-hint {
@@ -818,6 +855,103 @@ body {
   border-radius: 12px;
   font-size: 0.8rem;
   font-weight: 500;
+}
+
+/* Queue Visualization */
+.queue-visualization {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+}
+
+.queue-tracks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.queue-track {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.queue-track.current {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.queue-track.next {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.queue-track.ready {
+  border-color: rgba(76, 175, 80, 0.3);
+}
+
+.queue-track.generating {
+  border-color: rgba(255, 193, 7, 0.3);
+}
+
+.track-status {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.track-status i {
+  font-size: 0.8rem;
+  color: white;
+}
+
+.track-status.generating {
+  background: rgba(255, 193, 7, 0.2);
+}
+
+.loading-spinner-small {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.track-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.track-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: white;
+}
+
+.track-status-text {
+  font-size: 0.8rem;
+  opacity: 0.8;
+  color: white;
+}
+
+.queue-track.ready .track-status-text {
+  color: #4caf50;
+}
+
+.queue-track.generating .track-status-text {
+  color: #ffc107;
 }
 
 .music-controls audio {

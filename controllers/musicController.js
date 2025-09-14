@@ -111,22 +111,43 @@ const generateMusic = async (req, res) => {
     const sunoData = await sunoResponse.json();
     console.log('Suno generation started:', sunoData.id);
 
-    // Store the generation request in database
+    // Create initial queue with this track
+    const initialQueue = [{
+      id: sunoData.id,
+      status: 'generating',
+      title: '',
+      audioUrl: '',
+      imageUrl: '',
+      type: analysis.musicType,
+      description: analysis.description,
+      createdAt: new Date()
+    }];
+
+    // Store the generation request in database with queue
     await prisma.folder.update({
       where: { id: folderId },
       data: {
         musicClipId: sunoData.id,
         musicStatus: 'generating',
         musicType: analysis.musicType,
-        musicDescription: analysis.description
+        musicDescription: analysis.description,
+        musicQueue: initialQueue,
+        currentTrackIndex: 0,
+        isQueueActive: true
       }
     });
+
+    // Start generating next track in background (with delay to avoid rate limits)
+    setTimeout(() => {
+      generateNextTrack(folderId, analysis);
+    }, 5000); // 5 second delay
 
     res.json({
       success: true,
       clipId: sunoData.id,
       message: 'Music generation started! Check back in a minute.',
-      analysis: analysis
+      analysis: analysis,
+      queueActive: true
     });
 
   } catch (error) {
@@ -218,8 +239,181 @@ const getFolderMusic = async (req, res) => {
   }
 };
 
+// Generate next track in queue (background function)
+const generateNextTrack = async (folderId, analysis) => {
+  try {
+    console.log('Generating next track for folder:', folderId);
+    
+    // Generate next track using Suno API
+    const sunoResponse = await fetch('https://studio-api.prod.suno.com/api/v2/external/hackmit/generate', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.SUNO_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        topic: `${analysis.description} for studying - variation`,
+        tags: analysis.tags,
+        make_instrumental: true
+      })
+    });
+
+    if (!sunoResponse.ok) {
+      console.error('Failed to generate next track');
+      return;
+    }
+
+    const sunoData = await sunoResponse.json();
+    console.log('Next track generation started:', sunoData.id);
+
+    // Add to queue
+    const folder = await prisma.folder.findUnique({
+      where: { id: folderId }
+    });
+
+    if (folder && folder.musicQueue) {
+      const queue = Array.isArray(folder.musicQueue) ? folder.musicQueue : [];
+      queue.push({
+        id: sunoData.id,
+        status: 'generating',
+        title: '',
+        audioUrl: '',
+        imageUrl: '',
+        type: analysis.musicType,
+        description: analysis.description,
+        createdAt: new Date()
+      });
+
+      await prisma.folder.update({
+        where: { id: folderId },
+        data: { musicQueue: queue }
+      });
+    }
+  } catch (error) {
+    console.error('Error generating next track:', error);
+  }
+};
+
+// Skip to next track
+const skipNext = async (req, res) => {
+  try {
+    const folderId = Number(req.params.id);
+    const folder = await prisma.folder.findUnique({
+      where: { id: folderId }
+    });
+
+    if (!folder || !folder.musicQueue) {
+      return res.status(404).send("No music queue found");
+    }
+
+    const queue = Array.isArray(folder.musicQueue) ? folder.musicQueue : [];
+    const currentIndex = folder.currentTrackIndex || 0;
+    const nextIndex = currentIndex + 1;
+
+    if (nextIndex >= queue.length) {
+      return res.status(400).send("No next track available");
+    }
+
+    // Update current track index
+    await prisma.folder.update({
+      where: { id: folderId },
+      data: { currentTrackIndex: nextIndex }
+    });
+
+    const nextTrack = queue[nextIndex];
+    res.json({
+      success: true,
+      track: nextTrack,
+      currentIndex: nextIndex,
+      totalTracks: queue.length
+    });
+
+  } catch (error) {
+    console.error('Skip next error:', error);
+    res.status(500).send("Error skipping to next track: " + error.message);
+  }
+};
+
+// Skip to previous track
+const skipPrevious = async (req, res) => {
+  try {
+    const folderId = Number(req.params.id);
+    const folder = await prisma.folder.findUnique({
+      where: { id: folderId }
+    });
+
+    if (!folder || !folder.musicQueue) {
+      return res.status(404).send("No music queue found");
+    }
+
+    const queue = Array.isArray(folder.musicQueue) ? folder.musicQueue : [];
+    const currentIndex = folder.currentTrackIndex || 0;
+    const prevIndex = currentIndex - 1;
+
+    if (prevIndex < 0) {
+      return res.status(400).send("No previous track available");
+    }
+
+    // Update current track index
+    await prisma.folder.update({
+      where: { id: folderId },
+      data: { currentTrackIndex: prevIndex }
+    });
+
+    const prevTrack = queue[prevIndex];
+    res.json({
+      success: true,
+      track: prevTrack,
+      currentIndex: prevIndex,
+      totalTracks: queue.length
+    });
+
+  } catch (error) {
+    console.error('Skip previous error:', error);
+    res.status(500).send("Error skipping to previous track: " + error.message);
+  }
+};
+
+// Get current track from queue
+const getCurrentTrack = async (req, res) => {
+  try {
+    const folderId = Number(req.params.id);
+    const folder = await prisma.folder.findUnique({
+      where: { id: folderId }
+    });
+
+    if (!folder || !folder.musicQueue) {
+      return res.status(404).send("No music queue found");
+    }
+
+    const queue = Array.isArray(folder.musicQueue) ? folder.musicQueue : [];
+    const currentIndex = folder.currentTrackIndex || 0;
+    const currentTrack = queue[currentIndex];
+
+    if (!currentTrack) {
+      return res.status(404).send("No current track found");
+    }
+
+    res.json({
+      success: true,
+      track: currentTrack,
+      currentIndex: currentIndex,
+      totalTracks: queue.length,
+      hasNext: currentIndex < queue.length - 1,
+      hasPrevious: currentIndex > 0
+    });
+
+  } catch (error) {
+    console.error('Get current track error:', error);
+    res.status(500).send("Error getting current track: " + error.message);
+  }
+};
+
 module.exports = {
   generateMusic,
   getMusicStatus,
-  getFolderMusic
+  getFolderMusic,
+  skipNext,
+  skipPrevious,
+  getCurrentTrack
 };

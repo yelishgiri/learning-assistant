@@ -12,4 +12,13 @@ musicRouter.get('/:id/status', requireAuth, musicController.getMusicStatus);
 // GET: Get current music for a folder
 musicRouter.get('/:id/music', requireAuth, musicController.getFolderMusic);
 
+// POST: Skip to next track
+musicRouter.post('/:id/skip-next', requireAuth, musicController.skipNext);
+
+// POST: Skip to previous track
+musicRouter.post('/:id/skip-previous', requireAuth, musicController.skipPrevious);
+
+// GET: Get current track from queue
+musicRouter.get('/:id/current-track', requireAuth, musicController.getCurrentTrack);
+
 module.exports = musicRouter;

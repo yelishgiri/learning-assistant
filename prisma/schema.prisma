@@ -43,6 +43,11 @@ model Folder {
   musicImageUrl    String?  // Cover art URL
   musicType        String?  // Type of music (ambient, baroque, cinematic)
   musicDescription String?  // Description of the music
+  
+  // Music queue fields
+  musicQueue       Json?    // Array of music clips in queue
+  currentTrackIndex Int?    // Current track index in queue
+  isQueueActive    Boolean? // Whether queue is active
 
   @@unique([name, authorId])
 }

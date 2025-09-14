@@ -99,9 +99,21 @@
                     <div class="music-details">
                       <h4 id="music-title">Loading...</h4>
                       <p id="music-description">Analyzing your study materials...</p>
+                      <div class="queue-info">
+                        <span id="track-counter">Track 1 of 1</span>
+                        <span id="queue-status" class="queue-status">Queue Active</span>
+                      </div>
                     </div>
                   </div>
                   <div class="music-controls">
+                    <div class="skip-controls">
+                      <button id="skip-previous-btn" class="skip-btn" disabled>
+                        <i class="fas fa-step-backward"></i>
+                      </button>
+                      <button id="skip-next-btn" class="skip-btn" disabled>
+                        <i class="fas fa-step-forward"></i>
+                      </button>
+                    </div>
                     <audio id="music-audio" controls style="width: 100%;">
                       <source id="music-source" src="" type="audio/mpeg">
                       Your browser does not support the audio element.
@@ -290,6 +302,8 @@
       // Music generation functionality
       const folderId = <%= folder.id %>;
       let musicCheckInterval;
+      let currentTrackIndex = 0;
+      let totalTracks = 1;
 
       // Check if folder already has music
       async function checkExistingMusic() {
@@ -300,6 +314,8 @@
           if (data.hasMusic) {
             if (data.status === 'complete' && data.audioUrl) {
               showMusicReady(data);
+              // Check for queue and current track
+              checkCurrentTrack();
             } else if (data.status === 'generating' || data.status === 'streaming') {
               showMusicLoading();
               startMusicStatusCheck();
@@ -310,6 +326,28 @@
         } catch (error) {
           console.error('Error checking existing music:', error);
           showMusicGenerate();
+        }
+      }
+
+      // Check current track from queue
+      async function checkCurrentTrack() {
+        try {
+          const response = await fetch(`/folder/${folderId}/current-track`);
+          const data = await response.json();
+          
+          if (data.success) {
+            currentTrackIndex = data.currentIndex;
+            totalTracks = data.totalTracks;
+            updateSkipButtons(data.hasNext, data.hasPrevious);
+            updateTrackCounter();
+            
+            // If current track is ready, load it
+            if (data.track.status === 'complete' && data.track.audioUrl) {
+              loadTrack(data.track);
+            }
+          }
+        } catch (error) {
+          console.error('Error checking current track:', error);
         }
       }
 
@@ -393,11 +431,115 @@
         }
       }
 
+      // Skip to next track
+      async function skipNext() {
+        try {
+          const response = await fetch(`/folder/${folderId}/skip-next`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          
+          const data = await response.json();
+          if (data.success) {
+            currentTrackIndex = data.currentIndex;
+            totalTracks = data.totalTracks;
+            updateTrackCounter();
+            updateSkipButtons(data.hasNext, data.hasPrevious);
+            
+            if (data.track.status === 'complete' && data.track.audioUrl) {
+              loadTrack(data.track);
+            } else {
+              showMusicLoading();
+              startMusicStatusCheck();
+            }
+          }
+        } catch (error) {
+          console.error('Error skipping to next track:', error);
+        }
+      }
+
+      // Skip to previous track
+      async function skipPrevious() {
+        try {
+          const response = await fetch(`/folder/${folderId}/skip-previous`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          
+          const data = await response.json();
+          if (data.success) {
+            currentTrackIndex = data.currentIndex;
+            totalTracks = data.totalTracks;
+            updateTrackCounter();
+            updateSkipButtons(data.hasNext, data.hasPrevious);
+            
+            if (data.track.status === 'complete' && data.track.audioUrl) {
+              loadTrack(data.track);
+            } else {
+              showMusicLoading();
+              startMusicStatusCheck();
+            }
+          }
+        } catch (error) {
+          console.error('Error skipping to previous track:', error);
+        }
+      }
+
+      // Load a track into the player
+      function loadTrack(track) {
+        if (track.title) {
+          document.getElementById('music-title').textContent = track.title;
+        }
+        if (track.imageUrl) {
+          document.getElementById('music-cover-img').src = track.imageUrl;
+        }
+        if (track.audioUrl) {
+          document.getElementById('music-source').src = track.audioUrl;
+          document.getElementById('music-audio').load();
+        }
+      }
+
+      // Update skip button states
+      function updateSkipButtons(hasNext, hasPrevious) {
+        document.getElementById('skip-next-btn').disabled = !hasNext;
+        document.getElementById('skip-previous-btn').disabled = !hasPrevious;
+      }
+
+      // Update track counter
+      function updateTrackCounter() {
+        document.getElementById('track-counter').textContent = `Track ${currentTrackIndex + 1} of ${totalTracks}`;
+      }
+
+      // Auto-transition to next track when current ends
+      function setupAutoTransition() {
+        const audio = document.getElementById('music-audio');
+        audio.addEventListener('ended', async () => {
+          console.log('Track ended, checking for next track...');
+          try {
+            const response = await fetch(`/folder/${folderId}/current-track`);
+            const data = await response.json();
+            
+            if (data.success && data.hasNext) {
+              await skipNext();
+            } else {
+              // Generate next track if queue is empty
+              console.log('Generating next track...');
+              await generateMusic();
+            }
+          } catch (error) {
+            console.error('Error in auto-transition:', error);
+          }
+        });
+      }
+
       // Event listeners
       document.getElementById('generate-music-btn').addEventListener('click', generateMusic);
+      document.getElementById('skip-next-btn').addEventListener('click', skipNext);
+      document.getElementById('skip-previous-btn').addEventListener('click', skipPrevious);
 
       // Initialize music bar
       checkExistingMusic();
+      setupAutoTransition();
     </script>
   </body>
 </html>

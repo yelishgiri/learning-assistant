@@ -1,4 +1,4 @@
-# Studyo - AI-Powered Study Environment
+# Studyo - an Integrated Study Environment
 
 An integrated study platform that combines file organization, AI-powered analysis, and personalized music generation to enhance your learning experience.
 

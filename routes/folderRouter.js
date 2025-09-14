@@ -1,15 +1,16 @@
 const folderController = require('../controllers/folderController')
 const { Router }= require('express')
+const { requireAuth } = require('../middleware/auth');
 const folderRouter = Router();
 
-folderRouter.get("/create", folderController.createFolderGet);
-folderRouter.post("/create", folderController.createFolderPost);
+folderRouter.get("/create", requireAuth, folderController.createFolderGet);
+folderRouter.post("/create", requireAuth, folderController.createFolderPost);
 
-folderRouter.get("/:id/update", folderController.updateFolderGet);
-folderRouter.post("/:id/update", folderController.updateFolderPost);
+folderRouter.get("/:id/update", requireAuth, folderController.updateFolderGet);
+folderRouter.post("/:id/update", requireAuth, folderController.updateFolderPost);
 
-folderRouter.get("/:id/details", folderController.getFolderDetail);
+folderRouter.get("/:id/details", requireAuth, folderController.getFolderDetail);
 
-folderRouter.post("/:id/delete", folderController. deleteFolderPost);
+folderRouter.post("/:id/delete", requireAuth, folderController. deleteFolderPost);
 
 module.exports = folderRouter;

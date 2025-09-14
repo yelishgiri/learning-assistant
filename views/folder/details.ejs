@@ -75,6 +75,51 @@
           </div>
         </div>
 
+        <!-- Music Bar Section -->
+        <div class="music-section">
+          <div class="music-card">
+            <div class="music-header">
+              <h3>
+                <i class="fas fa-music"></i>
+                Study Music
+              </h3>
+              <p>AI-generated music optimized for your study materials</p>
+            </div>
+            <div class="music-content">
+              <div id="music-player" class="music-player">
+                <div id="music-loading" class="music-loading" style="display: none;">
+                  <div class="loading-spinner"></div>
+                  <p>Generating your study music...</p>
+                </div>
+                <div id="music-ready" class="music-ready" style="display: none;">
+                  <div class="music-info">
+                    <div class="music-cover">
+                      <img id="music-cover-img" src="" alt="Music Cover" />
+                    </div>
+                    <div class="music-details">
+                      <h4 id="music-title">Loading...</h4>
+                      <p id="music-description">Analyzing your study materials...</p>
+                    </div>
+                  </div>
+                  <div class="music-controls">
+                    <audio id="music-audio" controls style="width: 100%;">
+                      <source id="music-source" src="" type="audio/mpeg">
+                      Your browser does not support the audio element.
+                    </audio>
+                  </div>
+                </div>
+                <div id="music-generate" class="music-generate">
+                  <button id="generate-music-btn" class="btn btn-primary">
+                    <i class="fas fa-music"></i>
+                    Generate Study Music
+                  </button>
+                  <p class="music-hint">Music will be tailored to your study materials</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Share Link Section -->
         <% if (folder.shareLink) { %>
         <div class="share-section">
@@ -241,6 +286,118 @@
             btn.classList.remove("btn-success");
           }, 2000);
         });
+
+      // Music generation functionality
+      const folderId = <%= folder.id %>;
+      let musicCheckInterval;
+
+      // Check if folder already has music
+      async function checkExistingMusic() {
+        try {
+          const response = await fetch(`/folder/${folderId}/music`);
+          const data = await response.json();
+          
+          if (data.hasMusic) {
+            if (data.status === 'complete' && data.audioUrl) {
+              showMusicReady(data);
+            } else if (data.status === 'generating' || data.status === 'streaming') {
+              showMusicLoading();
+              startMusicStatusCheck();
+            }
+          } else {
+            showMusicGenerate();
+          }
+        } catch (error) {
+          console.error('Error checking existing music:', error);
+          showMusicGenerate();
+        }
+      }
+
+      // Generate new music
+      async function generateMusic() {
+        try {
+          showMusicLoading();
+          
+          const response = await fetch(`/folder/${folderId}/generate`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          const data = await response.json();
+          
+          if (data.success) {
+            startMusicStatusCheck();
+          } else {
+            throw new Error(data.message || 'Failed to generate music');
+          }
+        } catch (error) {
+          console.error('Error generating music:', error);
+          alert('Error generating music: ' + error.message);
+          showMusicGenerate();
+        }
+      }
+
+      // Check music generation status
+      async function checkMusicStatus() {
+        try {
+          const response = await fetch(`/folder/${folderId}/status`);
+          const data = await response.json();
+          
+          if (data.status === 'complete' && data.audioUrl) {
+            showMusicReady(data);
+            clearInterval(musicCheckInterval);
+          } else if (data.status === 'error') {
+            throw new Error('Music generation failed');
+          }
+        } catch (error) {
+          console.error('Error checking music status:', error);
+          clearInterval(musicCheckInterval);
+          showMusicGenerate();
+        }
+      }
+
+      // Start checking music status every 5 seconds
+      function startMusicStatusCheck() {
+        musicCheckInterval = setInterval(checkMusicStatus, 5000);
+      }
+
+      // Show different UI states
+      function showMusicGenerate() {
+        document.getElementById('music-generate').style.display = 'block';
+        document.getElementById('music-loading').style.display = 'none';
+        document.getElementById('music-ready').style.display = 'none';
+      }
+
+      function showMusicLoading() {
+        document.getElementById('music-generate').style.display = 'none';
+        document.getElementById('music-loading').style.display = 'block';
+        document.getElementById('music-ready').style.display = 'none';
+      }
+
+      function showMusicReady(data) {
+        document.getElementById('music-generate').style.display = 'none';
+        document.getElementById('music-loading').style.display = 'none';
+        document.getElementById('music-ready').style.display = 'block';
+        
+        if (data.title) {
+          document.getElementById('music-title').textContent = data.title;
+        }
+        if (data.imageUrl) {
+          document.getElementById('music-cover-img').src = data.imageUrl;
+        }
+        if (data.audioUrl) {
+          document.getElementById('music-source').src = data.audioUrl;
+          document.getElementById('music-audio').load();
+        }
+      }
+
+      // Event listeners
+      document.getElementById('generate-music-btn').addEventListener('click', generateMusic);
+
+      // Initialize music bar
+      checkExistingMusic();
     </script>
   </body>
 </html>

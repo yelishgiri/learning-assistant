@@ -9,6 +9,7 @@ const folderRouter = require('./routes/folderRouter');
 
 const fileRouter = require('./routes/fileRouter');
 const summaryRouter = require('./routes/summaryRouter');
+const musicRouter = require('./routes/musicRouter');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const assetsPath = path.join(__dirname, "public");
@@ -31,6 +32,7 @@ app.use('/auth', authRouter);
 app.use('/folder', folderRouter);
 app.use('/file', fileRouter);
 app.use('/file', summaryRouter); // summary endpoints are /file/:id/summary
+app.use('/folder', musicRouter); // music endpoints are /folder/:id/music
 
 app.listen(PORT, () => {
     console.log(`App is listening on the ${PORT}`);

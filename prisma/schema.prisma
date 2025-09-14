@@ -34,6 +34,15 @@ model Folder {
   authorId   Int
   files      File[]
   shareLink  ShareLink[]
+  
+  // Music generation fields
+  musicClipId      String?  // Suno API clip ID
+  musicStatus      String?  // generating, streaming, complete, error
+  musicTitle       String?  // Generated music title
+  musicAudioUrl    String?  // Audio URL for streaming/download
+  musicImageUrl    String?  // Cover art URL
+  musicType        String?  // Type of music (ambient, baroque, cinematic)
+  musicDescription String?  // Description of the music
 
   @@unique([name, authorId])
 }
